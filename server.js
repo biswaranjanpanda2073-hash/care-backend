@@ -135,6 +135,31 @@ app.get('/api/tickets', async (req, res) => {
   }
 });
 
+// API: Delete User
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    await db().collection('users').doc(req.params.id).delete();
+    res.json({ message: "User deleted" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// API: Toggle User Status (Active/Inactive)
+app.post('/api/users/:id/toggle', async (req, res) => {
+  try {
+    const docRef = db().collection('users').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) return res.status(404).json({ error: "User not found" });
+    
+    const newStatus = !doc.data().active;
+    await docRef.update({ active: newStatus });
+    res.json({ message: `User ${newStatus ? 'activated' : 'deactivated'}`, active: newStatus });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // API: List notification logs (Debug)
 app.get('/api/logs', async (req, res) => {
   try {
