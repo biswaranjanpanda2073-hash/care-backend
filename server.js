@@ -26,17 +26,17 @@ try {
 // --- Mock Data Seeding (For testing) ---
 const seedUsers = async () => {
   const users = [
-    { id: 'U1', email: 'support@care.com', role: 'support' },
-    { id: 'U2', email: 'quality@care.com', role: 'quality' },
-    { id: 'U3', email: 'owner@care.com', role: 'owner' },
-    { id: 'U4', email: 'validator@care.com', role: 'validator' },
-    { id: 'U5', email: 'management@care.com', role: 'management' },
-    { id: 'U6', email: 'admin@care.com', role: 'admin' },
-    { id: 'U7', email: 'care.tohandsnotifications@gmail.com', role: 'admin' }
+    { id: 'U1', name: 'John Doe', email: 'support@care.com', password: 'password123', role: 'support' },
+    { id: 'U2', name: 'Alice Eng', email: 'quality@care.com', password: 'password123', role: 'quality' },
+    { id: 'U3', name: 'Bob Owner', email: 'owner@care.com', password: 'password123', role: 'owner' },
+    { id: 'U4', name: 'Eve Valid', email: 'validator@care.com', password: 'password123', role: 'validator' },
+    { id: 'U5', name: 'Mgr Smith', email: 'management@care.com', password: 'password123', role: 'management' },
+    { id: 'U6', name: 'Admin User', email: 'admin@care.com', password: 'password123', role: 'admin' },
+    { id: 'U7', name: 'Biswa (Real)', email: 'care.tohandsnotifications@gmail.com', password: 'password123', role: 'admin' }
   ];
   try {
     for (const u of users) {
-      await db().collection('users').doc(u.id).set({ user_id: u.id, email: u.email, role: u.role }, { merge: true });
+      await db().collection('users').doc(u.id).set({ ...u, active: true }, { merge: true });
     }
   } catch (e) {
     console.log("Seed error:", e.message);
@@ -48,6 +48,16 @@ seedUsers();
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// API: List all users
+app.get('/api/users', async (req, res) => {
+  try {
+    const snap = await db().collection('users').get();
+    res.json(snap.docs.map(doc => doc.data()));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // API: Save FCM Token
 app.post('/api/save-fcm-token', async (req, res) => {
@@ -68,15 +78,18 @@ app.post('/api/save-fcm-token', async (req, res) => {
 
 // API: Create User
 app.post('/api/create-user', async (req, res) => {
-  const { userId, email, role } = req.body;
+  const { userId, email, role, name, password } = req.body;
   if (!userId || !email || !role) return res.status(400).json({ error: "Missing required fields" });
 
   try {
     await db().collection('users').doc(userId).set({
       user_id: userId,
       email: email,
-      role: role
-    });
+      role: role,
+      name: name || 'New User',
+      password: password || 'password123',
+      active: true
+    }, { merge: true });
     res.status(201).json({ message: "User synced to backend DB successfully" });
   } catch (e) {
     res.status(500).json({ error: e.message });
