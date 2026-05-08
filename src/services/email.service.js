@@ -1,29 +1,22 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const db = require('../db');
 
-const SMTP_USER = process.env.SMTP_USER || 'care.tohandsnotifications@gmail.com';
-const SMTP_PASS = process.env.SMTP_PASS || 'hicbndqvrxeyxcqp';
+// Use environment variables with fallbacks
+const RESEND_API_KEY = process.env.RESEND_API_KEY || 're_WNJXabUZ_BRkJDvaxtf4wHcgZJE4nHf82';
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: SMTP_USER,
-    pass: SMTP_PASS,
-  },
-});
+const resend = new Resend(RESEND_API_KEY);
 
 /**
- * Sends an email notification
+ * Sends an email notification using Resend API
  * @param {string} userId - Target User ID
  * @param {string} subject - Email Subject
  * @param {string} htmlBody - HTML formatted email body
  * @param {string} eventType - Notification event type for logging
  */
 async function sendEmailNotification(userId, subject, htmlBody, eventType) {
-  if (!SMTP_USER || !SMTP_PASS) {
-    console.warn(`⚠️ SMTP Credentials missing. Skipping email to ${userId}`);
+  if (!RESEND_API_KEY) {
+    console.warn(`⚠️ Resend API Key missing. Skipping email to ${userId}`);
     return;
   }
 
@@ -33,12 +26,16 @@ async function sendEmailNotification(userId, subject, htmlBody, eventType) {
     const user = userSnap.data();
     if (!user.email) return;
 
-    await transporter.sendMail({
-      from: `"CARE QMS" <${SMTP_USER}>`,
-      to: user.email,
+    const { data, error } = await resend.emails.send({
+      from: `CARE QMS <${RESEND_FROM_EMAIL}>`,
+      to: [user.email],
       subject: subject,
       html: htmlBody,
     });
+
+    if (error) {
+      throw new Error(error.message);
+    }
 
     // Log success
     await db().collection('notification_logs').add({
@@ -46,9 +43,10 @@ async function sendEmailNotification(userId, subject, htmlBody, eventType) {
       type: eventType,
       channel: 'email',
       status: 'SUCCESS',
+      resend_id: data.id,
       timestamp: new Date().toISOString()
     });
-    console.log(`✉️ Email sent to ${user.email} (${eventType})`);
+    console.log(`✉️ Email sent via Resend to ${user.email} (${eventType})`);
   } catch (error) {
     const errMsg = error.message ? error.message : String(error);
     console.error(`❌ Email error to ${userId}:`, errMsg);
@@ -75,7 +73,7 @@ const templates = {
         <p><strong>Priority:</strong> ${ticket.priority}</p>
         <hr/>
         <p style="color: #4B5563;">This ticket has crossed its resolution due date and requires immediate attention.</p>
-        <a href="http://localhost:5173" style="display: inline-block; padding: 10px 15px; background: #2563EB; color: #fff; text-decoration: none; border-radius: 4px; margin-top: 10px;">View Ticket in CARE</a>
+        <a href="https://care-app-b6649.web.app/" style="display: inline-block; padding: 10px 15px; background: #2563EB; color: #fff; text-decoration: none; border-radius: 4px; margin-top: 10px;">View Ticket in CARE</a>
       </div>
     `
   }),
@@ -89,7 +87,7 @@ const templates = {
         <p><strong>Priority:</strong> <span style="color: #DC2626; font-weight: bold;">${ticket.priority}</span></p>
         <hr/>
         <p>A high-priority issue has been assigned to your queue.</p>
-        <a href="http://localhost:5173" style="display: inline-block; padding: 10px 15px; background: #2563EB; color: #fff; text-decoration: none; border-radius: 4px; margin-top: 10px;">View Ticket</a>
+        <a href="https://care-app-b6649.web.app/" style="display: inline-block; padding: 10px 15px; background: #2563EB; color: #fff; text-decoration: none; border-radius: 4px; margin-top: 10px;">View Ticket</a>
       </div>
     `
   }),
