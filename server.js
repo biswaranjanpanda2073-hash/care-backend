@@ -145,6 +145,28 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
+// API: Update User
+app.put('/api/users/:id', async (req, res) => {
+  const { name, email, role, active, password } = req.body;
+  try {
+    const docRef = db().collection('users').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) return res.status(404).json({ error: "User not found" });
+
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (role) updateData.role = role;
+    if (active !== undefined) updateData.active = active;
+    if (password) updateData.password = password;
+
+    await docRef.update(updateData);
+    res.json({ message: "User updated successfully" });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // API: Toggle User Status (Active/Inactive)
 app.post('/api/users/:id/toggle', async (req, res) => {
   try {
