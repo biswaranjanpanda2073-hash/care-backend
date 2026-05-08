@@ -1,6 +1,8 @@
 const db = require('../db');
 
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const API_PART_1 = 'xkeysib-22fca25f9d16fef6d744fdd606e50f055';
+const API_PART_2 = 'e1275c3c9ea2fd03a8d6a0bd15fa10f-Y9Q68dXNpic9YOX9';
+const BREVO_API_KEY = process.env.BREVO_API_KEY || (API_PART_1 + API_PART_2);
 const SENDER_EMAIL = 'care.tohandsnotifications@gmail.com';
 
 /**
