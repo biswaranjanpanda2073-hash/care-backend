@@ -53,6 +53,7 @@ async function sendEmailNotification(userId, subject, htmlBody, eventType) {
       type: eventType,
       channel: 'email',
       status: 'FAILED',
+      error: error.message,
       timestamp: new Date().toISOString()
     });
   }
