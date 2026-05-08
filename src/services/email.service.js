@@ -47,13 +47,14 @@ async function sendEmailNotification(userId, subject, htmlBody, eventType) {
     });
     console.log(`✉️ Email sent to ${user.email} (${eventType})`);
   } catch (error) {
-    console.error(`❌ Email error to ${userId}:`, error.message);
+    const errMsg = error.message ? error.message : String(error);
+    console.error(`❌ Email error to ${userId}:`, errMsg);
     await db().collection('notification_logs').add({
       user_id: userId,
       type: eventType,
       channel: 'email',
       status: 'FAILED',
-      error: error.message,
+      error: errMsg,
       timestamp: new Date().toISOString()
     });
   }
