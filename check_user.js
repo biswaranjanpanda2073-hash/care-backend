@@ -1,23 +1,24 @@
+const db = require('./src/db');
+require('dotenv').config();
 const admin = require('firebase-admin');
 const serviceAccount = require('./serviceAccountKey.json');
 
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
 }
-
-const db = admin.firestore();
 
 async function checkUser() {
-  const usersSnap = await db.collection('users').where('email', '==', 'biswaranjan@tohands.in').get();
-  if (usersSnap.empty) {
-    console.log("User NOT found in Firestore!");
-  } else {
-    usersSnap.forEach(doc => {
-      console.log("User found:", doc.id, "=>", doc.data());
-    });
-  }
+    try {
+        const snap = await admin.firestore().collection('users').doc('U1777720761174').get();
+        if (snap.exists) {
+            console.log("User exists:", snap.data());
+        } else {
+            console.log("User does not exist in backend DB!");
+        }
+    } catch(e) {
+        console.log("Error:", e);
+    }
 }
-
-checkUser().then(() => process.exit());
+checkUser();

@@ -1,22 +1,18 @@
-const { Resend } = require('resend');
 const db = require('../db');
 
-// Use environment variables with fallbacks
-const RESEND_API_KEY = process.env.RESEND_API_KEY || 're_WNJXabUZ_BRkJDvaxtf4wHcgZJE4nHf82';
-const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-
-const resend = new Resend(RESEND_API_KEY);
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const SENDER_EMAIL = 'care.tohandsnotifications@gmail.com';
 
 /**
- * Sends an email notification using Resend API
+ * Sends an email notification using Brevo API via fetch
  * @param {string} userId - Target User ID
  * @param {string} subject - Email Subject
  * @param {string} htmlBody - HTML formatted email body
  * @param {string} eventType - Notification event type for logging
  */
 async function sendEmailNotification(userId, subject, htmlBody, eventType) {
-  if (!RESEND_API_KEY) {
-    console.warn(`⚠️ Resend API Key missing. Skipping email to ${userId}`);
+  if (!BREVO_API_KEY) {
+    console.warn(`⚠️ Brevo API Key missing. Skipping email to ${userId}`);
     return;
   }
 
@@ -26,16 +22,29 @@ async function sendEmailNotification(userId, subject, htmlBody, eventType) {
     const user = userSnap.data();
     if (!user.email) return;
 
-    const { data, error } = await resend.emails.send({
-      from: `CARE QMS <${RESEND_FROM_EMAIL}>`,
-      to: [user.email],
+    const payload = {
+      sender: { name: "CARE QMS", email: SENDER_EMAIL },
+      to: [{ email: user.email, name: user.name || "User" }],
       subject: subject,
-      html: htmlBody,
+      htmlContent: htmlBody
+    };
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
     });
 
-    if (error) {
-      throw new Error(error.message);
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.message || 'Failed to send via Brevo');
     }
+
+    const data = await response.json();
 
     // Log success
     await db().collection('notification_logs').add({
@@ -43,10 +52,10 @@ async function sendEmailNotification(userId, subject, htmlBody, eventType) {
       type: eventType,
       channel: 'email',
       status: 'SUCCESS',
-      resend_id: data.id,
+      message_id: data.messageId,
       timestamp: new Date().toISOString()
     });
-    console.log(`✉️ Email sent via Resend to ${user.email} (${eventType})`);
+    console.log(`✉️ Email sent via Brevo to ${user.email} (${eventType})`);
   } catch (error) {
     const errMsg = error.message ? error.message : String(error);
     console.error(`❌ Email error to ${userId}:`, errMsg);
