@@ -1,13 +1,16 @@
 const nodemailer = require('nodemailer');
 const db = require('../db');
 
+const SMTP_USER = process.env.SMTP_USER || 'care.tohandsnotifications@gmail.com';
+const SMTP_PASS = process.env.SMTP_PASS || 'hicbndqvrxeyxcqp';
+
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
   secure: false,
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: SMTP_USER,
+    pass: SMTP_PASS,
   },
 });
 
@@ -19,7 +22,7 @@ const transporter = nodemailer.createTransport({
  * @param {string} eventType - Notification event type for logging
  */
 async function sendEmailNotification(userId, subject, htmlBody, eventType) {
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  if (!SMTP_USER || !SMTP_PASS) {
     console.warn(`⚠️ SMTP Credentials missing. Skipping email to ${userId}`);
     return;
   }
@@ -31,7 +34,7 @@ async function sendEmailNotification(userId, subject, htmlBody, eventType) {
     if (!user.email) return;
 
     await transporter.sendMail({
-      from: `"CARE QMS" <${process.env.SMTP_USER}>`,
+      from: `"CARE QMS" <${SMTP_USER}>`,
       to: user.email,
       subject: subject,
       html: htmlBody,
